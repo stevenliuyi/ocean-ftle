@@ -103,6 +103,33 @@ def setup_grid(nx, ny, dl, ul, ll, rl):
     return (x, y)
 
 # -----------------------------------------------------------------------------
+# get coordinates of a point
+def coord(time, i, j):
+    # grid domain
+    lats = np.linspace(down_lat, up_lat, ny)
+    lons = np.linspace(left_lon, right_lon, nx)
+
+    xij = trajx[time][i,j]
+    yij = trajy[time][i,j]
+
+    yp=min(np.searchsorted(y[0], yij, side='right')-1, ny-2)
+    xm=np.zeros(nx)
+    for k in range(0,nx):
+        xm[k] = interp(y[0,yp], y[0,yp+1], \
+                x[k,yp], x[k,yp+1], yij)
+    xp=min(np.searchsorted(xm, xij, side='right')-1, nx-2)
+    lon = interp(xm[xp], xm[xp+1], lons[xp], lons[xp+1], xij)
+    lat = interp(y[0,yp], y[0,yp+1], lats[yp], lats[yp+1], yij)
+
+    return (lon, lat)
+    
+# -----------------------------------------------------------------------------
+# linear interpolation
+def interp(x1, x2, y1, y2, xm):
+    ym = y2 - (y2-y1)/(x2-x1) * (x2-xm)
+    return ym
+
+# -----------------------------------------------------------------------------
 def show_traj():
     c1 = 'y'; c2 = 'c'; c3='g'
     #m.plot(-78.75, 29.625, 'o', linewidth=15, color=c3)
@@ -160,8 +187,6 @@ plot_type = "velocity"
 #plot_type = "vorticity"
 
 for t in range(6, 8, 4):
-    fig = plt.figure(figsize=(14,7))
-
     m = Basemap(projection='cyl',llcrnrlat=down_lat,urcrnrlat=up_lat,\
             llcrnrlon=left_lon,urcrnrlon=right_lon,resolution='i')
     m.drawcoastlines(linewidth=.5, color='#444444')
@@ -179,6 +204,21 @@ for t in range(6, 8, 4):
     (pftle, nx, ny) = read('data/ftle_pos_' + t_str + '.txt')
     plcs = get_lcs(pftle, .5)
     
+    # read trajectory files
+    trajx = []; trajy = []
+    for k in range(0, 11):
+        (trajxk, nx, ny) = read('data/traj_x_pos_' + t_str \
+                + '_' + str(k) + '.txt')
+        (trajyk, nx, ny) = read('data/traj_y_pos_' + t_str \
+                + '_' + str(k) + '.txt')
+        trajx.append(trajxk)
+        trajy.append(trajyk)
+
+    # setup trajectory grid
+    (x,y) = setup_grid(nx, ny, down_lat, up_lat, left_lon, right_lon)
+
+    fig = plt.figure(figsize=(14,7))
+
     # velocity field
     if (plot_type == 'velocity'):
         ufilename = "data/u_" + t_str + ".ascii"
