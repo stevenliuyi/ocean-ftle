@@ -69,40 +69,6 @@ def read_vel(filename):
     return np.array(u).transpose()
 
 # -----------------------------------------------------------------------------
-# setup data grid
-def setup_grid(nx, ny, dl, ul, ll, rl):
-    # grid domain
-    lats = np.linspace(dl, ul, ny)
-    lons = np.linspace(ll, rl, nx)
-
-    #latitude grid size in degree
-    dlat = (ul - dl) / (ny-1.)
-
-    # WGS84 spheroid constants
-    a = 6378137             # equatorial radius (m)
-    c = 6356752.3142        # polar radius (m)
-    e2 = 1 - c**2/a**2      # square of eccentricity
-
-    # compute length of .25 deg of lat and 1 deg of lon
-    lat_len = dlat * (np.pi*a*(1-e2)) / (180 * (1-e2*(np.sin(lats* \
-            np.pi/180))**2)**1.5)
-    lon_len = (np.pi*a*np.cos(lats*np.pi/180)) / (180 * (1-e2 \
-            *(np.sin(lats*np.pi/180))**2)**.5)
-
-    lats_ext = np.arange(25.125, dl, dlat)
-    lat_len_ext = dlat * (np.pi*a*(1-e2)) / (180 * (1-e2*(np.sin( \
-            lats_ext* np.pi/180))**2)**1.5)
-
-    # generate grid, (40W, 25.125N) is the point of origin
-    lat_sum = [sum(lat_len_ext)]
-    for i in lat_len[0:-1]:
-        lat_sum.append(lat_sum[-1]+i)
-
-    x = np.outer(lons+40, lon_len)
-    y = np.outer(np.ones(nx), lat_sum)
-    return (x, y)
-
-# -----------------------------------------------------------------------------
 # get coordinates of a point
 def coord(time, i, j):
     # grid domain
@@ -198,8 +164,8 @@ for t in range(6, 8, 4):
     lons = np.linspace(left_lon, right_lon, nx)
     m_left_lon = lons[imin]; m_right_lon = lons[imax]
     m_down_lat = lats[jmin]; m_up_lat = lats[jmax]
-    # setup trajectory grid
-    (x,y) = setup_grid(mx, my, m_down_lat, m_up_lat, m_left_lon, m_right_lon)
+
+    (x, y) = (trajx[0], trajy[0])
 
     fig = plt.figure(figsize=(14,7))
 
