@@ -69,6 +69,40 @@ def read_vel(filename):
     return np.array(u).transpose()
 
 # -----------------------------------------------------------------------------
+# setup data grid
+def setup_grid(nx, ny, dl, ul, ll, rl):
+    # grid domain
+    lats = np.linspace(dl, ul, ny)
+    lons = np.linspace(ll, rl, nx)
+
+    #latitude grid size in degree
+    dlat = (ul - dl) / (ny-1.)
+
+    # WGS84 spheroid constants
+    a = 6378137             # equatorial radius (m)
+    c = 6356752.3142        # polar radius (m)
+    e2 = 1 - c**2/a**2      # square of eccentricity
+
+    # compute length of .25 deg of lat and 1 deg of lon
+    lat_len = dlat * (np.pi*a*(1-e2)) / (180 * (1-e2*(np.sin(lats* \
+            np.pi/180))**2)**1.5)
+    lon_len = (np.pi*a*np.cos(lats*np.pi/180)) / (180 * (1-e2 \
+            *(np.sin(lats*np.pi/180))**2)**.5)
+
+    lats_ext = np.arange(25.125, dl, dlat)
+    lat_len_ext = dlat * (np.pi*a*(1-e2)) / (180 * (1-e2*(np.sin( \
+            lats_ext* np.pi/180))**2)**1.5)
+
+    # generate grid, (40W, 25.125N) is the point of origin
+    lat_sum = [sum(lat_len_ext)]
+    for i in lat_len[0:-1]:
+        lat_sum.append(lat_sum[-1]+i)
+
+    x = np.outer(lons+40, lon_len)
+    y = np.outer(np.ones(nx), lat_sum)
+    return (x, y)
+
+# -----------------------------------------------------------------------------
 def show_traj():
     c1 = 'y'; c2 = 'c'; c3='g'
     #m.plot(-78.75, 29.625, 'o', linewidth=15, color=c3)
@@ -125,7 +159,7 @@ ncmap._lut[:,-1] = alphas
 plot_type = "velocity"
 #plot_type = "vorticity"
 
-for t in range(4, 8, 4):
+for t in range(6, 8, 4):
     fig = plt.figure(figsize=(14,7))
 
     m = Basemap(projection='cyl',llcrnrlat=down_lat,urcrnrlat=up_lat,\
@@ -138,10 +172,10 @@ for t in range(4, 8, 4):
             fmt='%.1f')
     m.drawmapboundary(fill_color='#dddddd')
 
-    t_str = str(t).zfill(3)
+    t_str = str(t).zfill(4)
 
-    #(nftle, nx, ny) = read('data/ftle_neg_' + t_str + '.txt')
-    #nlcs = get_lcs(nftle, .5)
+    (nftle, nx, ny) = read('data/ftle_neg_' + t_str + '.txt')
+    nlcs = get_lcs(nftle, .5)
     (pftle, nx, ny) = read('data/ftle_pos_' + t_str + '.txt')
     plcs = get_lcs(pftle, .5)
     
@@ -180,8 +214,8 @@ for t in range(4, 8, 4):
     lats = np.linspace(down_lat, up_lat, ny)
 
     # negative LCS
-    #mftle = m.transform_scalar(nlcs.transpose(),lons,lats,nx,ny)
-    #im = m.imshow(mftle,ncmap)
+    mftle = m.transform_scalar(nlcs.transpose(),lons,lats,nx,ny)
+    im = m.imshow(mftle,ncmap)
     #cb = m.colorbar(im, "right", size='5%', pad='2%')
     #im.set_clim(vmin=0.000004,vmax=0.00001)
     
