@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 from mpl_toolkits.basemap import Basemap, cm
-from matplotlib.colors import colorConverter
 import sys
 
 def read(filename):
