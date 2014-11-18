@@ -119,6 +119,21 @@ def show_traj(nlon, nlat):
                     m.plot(itrajx[0], itrajy[0], 'o', mec='k', mfc=color, ms=4)
     return
 
+# -----------------------------------------------------------------------------
+# read trajectory files
+def read_traj():
+    trajx = []; trajy = []
+    for k in range(0, 11):
+        (trajxk, nx, ny) = read('data/traj_x_pos_' + t_str \
+                + '_' + str(k) + '.txt')
+        (trajyk, nx, ny) = read('data/traj_y_pos_' + t_str \
+                + '_' + str(k) + '.txt')
+        trajxk = trajxk[imin:imax+1, jmin:jmax+1]
+        trajyk = trajyk[imin:imax+1, jmin:jmax+1]
+        trajx.append(trajxk)
+        trajy.append(trajyk)
+    return (trajx, trajy)
+
 o_down_lat = 25.125
 o_up_lat = 74.875
 o_left_lon = -89.875
@@ -129,9 +144,9 @@ down_lat = o_down_lat; up_lat = 55
 left_lon = o_left_lon; right_lon = -30
 
 # map domain
-nx = 720; ny = 360
-imin = 0; imax = 320; mx = imax - imin + 1
-jmin = 0; jmax = 180; my = jmax - jmin + 1
+nx = 1200; ny = 600
+imin = 0; imax = 1199; mx = imax - imin + 1
+jmin = 0; jmax = 599; my = jmax - jmin + 1
 
 pcmap = mpl.colors.LinearSegmentedColormap.from_list('pcmap',['white','blue'],16)
 ncmap = mpl.colors.LinearSegmentedColormap.from_list('ncmap',['white','red'],16)
@@ -145,27 +160,18 @@ ncmap._lut[:,-1] = alphas
 plot_type = "velocity"
 #plot_type = "vorticity"
 
-for t in range(6, 8, 4):
+for t in range(7, 8, 4):
     t_str = str(t).zfill(4)
 
     # read trajectory files
-    trajx = []; trajy = []
-    for k in range(0, 11):
-        (trajxk, nx, ny) = read('data/traj_x_pos_' + t_str \
-                + '_' + str(k) + '.txt')
-        (trajyk, nx, ny) = read('data/traj_y_pos_' + t_str \
-                + '_' + str(k) + '.txt')
-        trajxk = trajxk[imin:imax+1, jmin:jmax+1]
-        trajyk = trajyk[imin:imax+1, jmin:jmax+1]
-        trajx.append(trajxk)
-        trajy.append(trajyk)
+    # (trajx, trajy) = read_traj()
+    # (x, y) = (trajx[0], trajy[0])
+
     # map domain
     lats = np.linspace(down_lat, up_lat, ny)
     lons = np.linspace(left_lon, right_lon, nx)
     m_left_lon = lons[imin]; m_right_lon = lons[imax]
     m_down_lat = lats[jmin]; m_up_lat = lats[jmax]
-
-    (x, y) = (trajx[0], trajy[0])
 
     fig = plt.figure(figsize=(14,7))
 
@@ -179,17 +185,17 @@ for t in range(6, 8, 4):
             fmt='%.1f')
     m.drawmapboundary(fill_color='#dddddd')
 
-    (nftle, nx, ny) = read('data/ftle_neg_' + t_str + '.txt')
+    (nftle, nx, ny) = read('ftle_neg_' + t_str + '.txt')
     nlcs = get_lcs(nftle, .5)
     nlcs = nlcs[imin:imax+1, jmin:jmax+1]
-    (pftle, nx, ny) = read('data/ftle_pos_' + t_str + '.txt')
+    (pftle, nx, ny) = read('ftle_pos_' + t_str + '.txt')
     plcs = get_lcs(pftle, .5)
     plcs = plcs[imin:imax+1, jmin:jmax+1]
     
     # velocity field
     if (plot_type == 'velocity'):
-        ufilename = "data/u_" + t_str + ".ascii"
-        vfilename = "data/v_" + t_str + ".ascii"
+        ufilename = "u_" + t_str + ".ascii"
+        vfilename = "v_" + t_str + ".ascii"
         u = read_vel(ufilename)
         v = read_vel(vfilename)
         (ux, uy) = u.shape
@@ -233,7 +239,7 @@ for t in range(6, 8, 4):
     #im.set_clim(vmin=0.000004,vmax=0.00001)
 
     # trajectory
-    show_traj(8, 8)
+    # show_traj(8, 8)
 
     plt.title("pFTLE, nFTLE and " + plot_type + " [Day " + str(t) + "]")
     #fig.savefig('ftle_' + plot_type + '_' + t_str + '.png')
