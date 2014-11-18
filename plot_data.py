@@ -34,11 +34,11 @@ def get_lcs(ftle, percent):
     lcs = np.zeros((nx,ny))
     for i in range(0,nx):
         for j in range(0,ny):
-            if (ftle[i][j]>percent*ftle_max):
-                lcs[i][j] = 1.
+            if (ftle[i,j]>percent*ftle_max):
+                lcs[i,j] = 1.
             else:
-                lcs[i][j] = 0.
-    return lcs
+                lcs[i,j] = 0.
+    return (lcs, ftle_max)
 
 # -----------------------------------------------------------------------------
 def read_vel(filename):
@@ -134,6 +134,28 @@ def read_traj():
         trajy.append(trajyk)
     return (trajx, trajy)
 
+# -----------------------------------------------------------------------------
+# identify saddle points
+def saddle():
+    return
+
+# -----------------------------------------------------------------------------
+# add a current time saddle point candidate
+def add_saddle(x, y):
+    global saddles
+    dist = 4    # range of the neighbors
+    for i in range(0, len(saddles)):
+        neighbors = []
+        for p in range(x-dist, x+dist+1):
+            for q in range(y-dist, y+dist+1):
+                neighbors.append((p,q))
+        for k in neighbors:
+            if k in saddles[i]:
+                saddles[i].append((x,y))
+                return
+    saddles.append([(x,y)])
+    return
+
 o_down_lat = 25.125
 o_up_lat = 74.875
 o_left_lon = -89.875
@@ -145,8 +167,11 @@ left_lon = o_left_lon; right_lon = -30
 
 # map domain
 nx = 1200; ny = 600
-imin = 0; imax = 1199; mx = imax - imin + 1
-jmin = 0; jmax = 599; my = jmax - jmin + 1
+imin = 0; imax = 600; mx = imax - imin + 1
+jmin = 0; jmax = 300; my = jmax - jmin + 1
+
+# LCS threshold
+thres = .5
 
 pcmap = mpl.colors.LinearSegmentedColormap.from_list('pcmap',['white','blue'],16)
 ncmap = mpl.colors.LinearSegmentedColormap.from_list('ncmap',['white','red'],16)
@@ -186,10 +211,10 @@ for t in range(7, 8, 4):
     m.drawmapboundary(fill_color='#dddddd')
 
     (nftle, nx, ny) = read('ftle_neg_' + t_str + '.txt')
-    nlcs = get_lcs(nftle, .5)
+    (nlcs, nmax) = get_lcs(nftle, thres)
     nlcs = nlcs[imin:imax+1, jmin:jmax+1]
     (pftle, nx, ny) = read('ftle_pos_' + t_str + '.txt')
-    plcs = get_lcs(pftle, .5)
+    (plcs, pmax) = get_lcs(pftle, thres)
     plcs = plcs[imin:imax+1, jmin:jmax+1]
     
     # velocity field
@@ -227,19 +252,28 @@ for t in range(7, 8, 4):
     lats = np.linspace(m_down_lat, m_up_lat, my)
 
     # negative LCS
-    mftle = m.transform_scalar(nlcs.transpose(),lons,lats,mx,my)
-    im = m.imshow(mftle,ncmap)
+    mnftle = m.transform_scalar(nlcs.transpose(),lons,lats,mx,my)
+    im = m.imshow(mnftle,ncmap)
     #cb = m.colorbar(im, "right", size='5%', pad='2%')
     #im.set_clim(vmin=0.000004,vmax=0.00001)
     
     # postive LCS
-    mftle = m.transform_scalar(plcs.transpose(),lons,lats,mx,my)
-    im = m.imshow(mftle,pcmap)
+    mpftle = m.transform_scalar(plcs.transpose(),lons,lats,mx,my)
+    im = m.imshow(mpftle,pcmap)
     #cb = m.colorbar(im, "right", size='5%', pad='2%')
     #im.set_clim(vmin=0.000004,vmax=0.00001)
 
     # trajectory
     # show_traj(8, 8)
+
+    # identify saddle points
+    saddles = []
+    for i in range(0, len(lons)):
+        for j in range(0, len(lats)):
+            if (nftle[i,j] > thres*nmax) and (pftle[i,j] > thres*pmax):
+                add_saddle(i,j)
+    for i in range(0, len(saddles)):
+        m.plot(lons[saddles[i][0][0]], lats[saddles[i][0][1]], 'o', mfc='y', ms=5)
 
     plt.title("pFTLE, nFTLE and " + plot_type + " [Day " + str(t) + "]")
     #fig.savefig('ftle_' + plot_type + '_' + t_str + '.png')
