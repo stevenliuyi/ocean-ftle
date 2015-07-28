@@ -129,7 +129,6 @@ def set_vel(tt):
 # update trajectory
 def update_traj(method):
     global traj_x, traj_y
-    velt2 = set_vel(.5)
     for i in range(0,ox):
         for j in range(0,oy):
             (vx, vy) = interp_vel(velt, traj_x[i][j], traj_y[i][j])
