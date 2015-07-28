@@ -185,7 +185,9 @@ ncmap._lut[:,-1] = alphas
 plot_type = "velocity"
 #plot_type = "vorticity"
 
-for t in range(7, 8, 4):
+saddle_series = []
+
+for t in range(2874, 2875, 1):
     t_str = str(t).zfill(4)
 
     # read trajectory files
@@ -272,11 +274,57 @@ for t in range(7, 8, 4):
         for j in range(0, len(lats)):
             if (nftle[i,j] > thres*nmax) and (pftle[i,j] > thres*pmax):
                 add_saddle(i,j)
+
+    # the first element identify if the series is active (Ture)
+    # or inactive (False)
+    for i in range(0, len(saddle_series)):
+        saddle_series[i][0] = False
+
     for i in range(0, len(saddles)):
-        m.plot(lons[saddles[i][0][0]], lats[saddles[i][0][1]], 'o', mfc='y', ms=5)
+        maxftle = 0; xmax = 0; ymax = 0
+        for j in range(0, len(saddles[i])):
+            x = saddles[i][j][0]
+            y = saddles[i][j][1]
+            multiply = nftle[x,y] * pftle[x,y]
+            if (multiply > maxftle):
+                maxftle = multiply; xmax = x; ymax = y
+        # determine whether create a new saddle serires 
+        # or add the saddle point to a existed one
+        dist = 6
+        neighbors = []
+        for p in range(xmax-dist, xmax+dist+1):
+            for q in range(ymax-dist, ymax+dist+1):
+                neighbors.append((p,q))
+        exist = False
+        for l in range(0, len(saddle_series)):
+            for k in neighbors:
+                if (k == saddle_series[l][-1]):
+                    saddle_series[l].append((xmax, ymax))
+                    saddle_series[l][0] = True
+                    exist = True
+                    break
+            if (exist): break
+        if (not exist): saddle_series.append([True, (xmax, ymax)])
+            
+    # remove inactive series
+    saddle_series_all = list(saddle_series)
+    saddle_series = []
+    for i in range(0, len(saddle_series_all)):
+        if (saddle_series_all[i][0]):
+            saddle_series.append(saddle_series_all[i])
+        
+    # plot saddle point series
+    for i in range(0, len(saddle_series)):
+        saddle_x = []
+        saddle_y = []
+        for j in range(1, len(saddle_series[i])):
+            saddle_x.append(lons[saddle_series[i][j][0]])
+            saddle_y.append(lats[saddle_series[i][j][1]])
+        m.plot(saddle_x[-1], saddle_y[-1], 'o', mfc='y', ms=5)
+        m.plot(saddle_x, saddle_y, '-', color='y', linewidth=2)
 
     plt.title("pFTLE, nFTLE and " + plot_type + " [Day " + str(t) + "]")
-    #fig.savefig('ftle_' + plot_type + '_' + t_str + '.png')
+    fig.savefig('ftle_' + plot_type + '_' + t_str + '.png')
     print "day " + t_str + " FTLE and " + plot_type + " plot saved"
     plt.show()
     plt.close(fig)
