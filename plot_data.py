@@ -134,27 +134,11 @@ def read_traj():
         trajy.append(trajyk)
     return (trajx, trajy)
 
-# -----------------------------------------------------------------------------
-# identify saddle points
-def saddle():
-    return
 
 # -----------------------------------------------------------------------------
-# add a current time saddle point candidate
-def add_saddle(x, y):
-    global saddles
-    dist = 4    # range of the neighbors
-    for i in range(0, len(saddles)):
-        neighbors = []
-        for p in range(x-dist, x+dist+1):
-            for q in range(y-dist, y+dist+1):
-                neighbors.append((p,q))
-        for k in neighbors:
-            if k in saddles[i]:
-                saddles[i].append((x,y))
-                return
-    saddles.append([(x,y)])
-    return
+# main program
+
+folder = '/Volumes/TOSHIBA EXT/Ocean/'
 
 o_down_lat = 25.125
 o_up_lat = 74.875
@@ -167,8 +151,8 @@ left_lon = o_left_lon; right_lon = -30
 
 # map domain
 nx = 1200; ny = 600
-imin = 0; imax = 600; mx = imax - imin + 1
-jmin = 0; jmax = 300; my = jmax - jmin + 1
+imin = 0; imax = 1199; mx = imax - imin + 1
+jmin = 0; jmax = 599; my = jmax - jmin + 1
 
 # LCS threshold
 thres = .5
@@ -185,9 +169,7 @@ ncmap._lut[:,-1] = alphas
 plot_type = "velocity"
 #plot_type = "vorticity"
 
-saddle_series = []
-
-for t in range(2874, 2875, 1):
+for t in range(7, 17, 1):
     t_str = str(t).zfill(4)
 
     # read trajectory files
@@ -212,17 +194,17 @@ for t in range(2874, 2875, 1):
             fmt='%.1f')
     m.drawmapboundary(fill_color='#dddddd')
 
-    (nftle, nx, ny) = read('ftle_neg_' + t_str + '.txt')
+    (nftle, nx, ny) = read(folder + 'FTLE/ftle_neg_' + t_str + '.txt')
     (nlcs, nmax) = get_lcs(nftle, thres)
     nlcs = nlcs[imin:imax+1, jmin:jmax+1]
-    (pftle, nx, ny) = read('ftle_pos_' + t_str + '.txt')
+    (pftle, nx, ny) = read(folder + 'FTLE/ftle_pos_' + t_str + '.txt')
     (plcs, pmax) = get_lcs(pftle, thres)
     plcs = plcs[imin:imax+1, jmin:jmax+1]
     
     # velocity field
     if (plot_type == 'velocity'):
-        ufilename = "u_" + t_str + ".ascii"
-        vfilename = "v_" + t_str + ".ascii"
+        ufilename = folder + "Data/u_" + t_str + ".ascii"
+        vfilename = folder + "Data/v_" + t_str + ".ascii"
         u = read_vel(ufilename)
         v = read_vel(vfilename)
         (ux, uy) = u.shape
@@ -239,7 +221,7 @@ for t in range(2874, 2875, 1):
         cb.set_label('m/s')
         #m.quiver(xq, yq, xp, yp, scale=50)
     elif (plot_type == 'vorticity'):
-        ofilename = "data/omega_" + t_str + ".ascii"
+        ofilename = folder + "Data/omega_" + t_str + ".ascii"
         omega = read_vel(ofilename)
         (ux, uy) = omega.shape
         lons = np.linspace(m_left_lon, m_right_lon, ux)
@@ -268,63 +250,8 @@ for t in range(2874, 2875, 1):
     # trajectory
     # show_traj(8, 8)
 
-    # identify saddle points
-    saddles = []
-    for i in range(0, len(lons)):
-        for j in range(0, len(lats)):
-            if (nftle[i,j] > thres*nmax) and (pftle[i,j] > thres*pmax):
-                add_saddle(i,j)
-
-    # the first element identify if the series is active (Ture)
-    # or inactive (False)
-    for i in range(0, len(saddle_series)):
-        saddle_series[i][0] = False
-
-    for i in range(0, len(saddles)):
-        maxftle = 0; xmax = 0; ymax = 0
-        for j in range(0, len(saddles[i])):
-            x = saddles[i][j][0]
-            y = saddles[i][j][1]
-            multiply = nftle[x,y] * pftle[x,y]
-            if (multiply > maxftle):
-                maxftle = multiply; xmax = x; ymax = y
-        # determine whether create a new saddle serires 
-        # or add the saddle point to a existed one
-        dist = 6
-        neighbors = []
-        for p in range(xmax-dist, xmax+dist+1):
-            for q in range(ymax-dist, ymax+dist+1):
-                neighbors.append((p,q))
-        exist = False
-        for l in range(0, len(saddle_series)):
-            for k in neighbors:
-                if (k == saddle_series[l][-1]):
-                    saddle_series[l].append((xmax, ymax))
-                    saddle_series[l][0] = True
-                    exist = True
-                    break
-            if (exist): break
-        if (not exist): saddle_series.append([True, (xmax, ymax)])
-            
-    # remove inactive series
-    saddle_series_all = list(saddle_series)
-    saddle_series = []
-    for i in range(0, len(saddle_series_all)):
-        if (saddle_series_all[i][0]):
-            saddle_series.append(saddle_series_all[i])
-        
-    # plot saddle point series
-    for i in range(0, len(saddle_series)):
-        saddle_x = []
-        saddle_y = []
-        for j in range(1, len(saddle_series[i])):
-            saddle_x.append(lons[saddle_series[i][j][0]])
-            saddle_y.append(lats[saddle_series[i][j][1]])
-        m.plot(saddle_x[-1], saddle_y[-1], 'o', mfc='y', ms=5)
-        m.plot(saddle_x, saddle_y, '-', color='y', linewidth=2)
-
     plt.title("pFTLE, nFTLE and " + plot_type + " [Day " + str(t) + "]")
     fig.savefig('ftle_' + plot_type + '_' + t_str + '.png')
     print "day " + t_str + " FTLE and " + plot_type + " plot saved"
-    plt.show()
+    #plt.show()
     plt.close(fig)
